@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">MSP432 TUT BLE Datalogger</string>
+    <string name="ble_not_supported">Bluetooth Low Energy Not Supported by the Device</string>
+    <string name="scan_button_title">Scan</string>
+    <string name="help_button_title">Help</string>
+    <string name="refresh">Refresh</string>
+    <string name="todo">TODO</string>
+    <string name="Temperature">Temperature</string>
+    <string name="menu_connect">Connect</string>
+    <string name="menu_disconnect">Disconnect</string>
+    <string name="ambient_temperature">Ambient Temperature</string>
+    <string name="humidity">Humidity</string>
+    <string name="barometric_pressure">Barometric Pressure</string>
+    <string name="illuminance">Illuminance</string>
+
+</resources>
