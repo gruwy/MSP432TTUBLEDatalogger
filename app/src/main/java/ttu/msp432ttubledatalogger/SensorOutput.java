@@ -10,8 +10,6 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
-import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
@@ -64,7 +62,6 @@ public class SensorOutput extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_data);
-
 
         BluetoothDevice device = Objects.requireNonNull(getIntent().getExtras()).getParcelable("Bluetooth_Device");
 
@@ -122,6 +119,7 @@ public class SensorOutput extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.data_menu, menu);
+        MenuItem rssi = menu.findItem(R.id.rssi);
         return true;
     }
 
@@ -148,7 +146,7 @@ public class SensorOutput extends AppCompatActivity {
         private void reset() { mState = 0; }
 
         private void advance() { mState++; }
-		
+
 		// Sensor enabling cases
         private void enableNextSensor(BluetoothGatt gatt) {
             BluetoothGattCharacteristic characteristic;
@@ -184,7 +182,7 @@ public class SensorOutput extends AppCompatActivity {
             }
             gatt.writeCharacteristic(characteristic);
         }
-		
+
 		// Sensor reading cases
         private void readNextSensor(BluetoothGatt gatt) {
             BluetoothGattCharacteristic characteristic;
@@ -216,7 +214,7 @@ public class SensorOutput extends AppCompatActivity {
             }
             gatt.readCharacteristic(characteristic);
         }
-		
+
 		// Notification enabling on sensors
         private void setNotifyNextSensor(BluetoothGatt gatt) {
             BluetoothGattCharacteristic characteristic;
@@ -246,10 +244,10 @@ public class SensorOutput extends AppCompatActivity {
                     Log.i(TAG, "Notification enabled on all sensors.");
                     return;
             }
-            
+
 			//Enable notification on client device
             gatt.setCharacteristicNotification(characteristic, true);
-            
+
 			//Enabled notifications on server device
             BluetoothGattDescriptor desc = characteristic.getDescriptor(CONFIG_DESCRIPTOR);
             desc.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
@@ -262,6 +260,7 @@ public class SensorOutput extends AppCompatActivity {
             Log.d(TAG, "Connection State Change: " + status + " -> " + connectionState(newState));
             if (status == BluetoothGatt.GATT_SUCCESS && newState == BluetoothProfile.STATE_CONNECTED) {
                 gatt.discoverServices();
+                gatt.readRemoteRssi();
                 mHandler.sendMessage(Message.obtain(null, MSG_PROGRESS, "Discovering Services..."));
             } else if (status == BluetoothGatt.GATT_SUCCESS && newState == BluetoothProfile.STATE_DISCONNECTED) {
                 mHandler.sendEmptyMessage(MSG_CLEAR);
@@ -270,7 +269,7 @@ public class SensorOutput extends AppCompatActivity {
                 finish();
             }
         }
-		
+
 		// On services discovered the application moves to sensor enabling
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
@@ -301,13 +300,14 @@ public class SensorOutput extends AppCompatActivity {
 
         //After writing the enable value, we read this value
 		@Override
-        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {       
+        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             readNextSensor(gatt);
         }
 
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-            
+            gatt.readRemoteRssi();
+
             if (TEMP_DATA.equals(characteristic.getUuid())) {
                 mHandler.sendMessage(Message.obtain(null, MSG_TEMP, characteristic));
             }
@@ -343,6 +343,13 @@ public class SensorOutput extends AppCompatActivity {
                     return String.valueOf(status);
             }
         }
+
+        public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status){
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                Log.d(TAG, String.format("BluetoothGatt ReadRssi[%d]", rssi));
+            }
+        }
+
     };
 
     /*  We have a Handler to process event results on the main thread */
@@ -372,7 +379,6 @@ public class SensorOutput extends AppCompatActivity {
                         return;
                     }
                     updateTemperatureValue(characteristic);
-                    Log.i(TAG, "Characteristic " + characteristic.getUuid() + " changed value!");
                     break;
 
                 case MSG_HUMIDITY:
@@ -384,7 +390,6 @@ public class SensorOutput extends AppCompatActivity {
                         return;
                     }
                     updateHumidityValue(characteristic);
-                    Log.i(TAG, "Characteristic " + characteristic.getUuid() + " changed value!");
                     break;
 
                 case MSG_OPTIC:
@@ -396,7 +401,6 @@ public class SensorOutput extends AppCompatActivity {
                         return;
                     }
                     updateOpticValue(characteristic);
-                    Log.i(TAG, "Characteristic " + characteristic.getUuid() + " changed value!");
                     break;
 
                 case MSG_BAROMETER:
@@ -408,7 +412,6 @@ public class SensorOutput extends AppCompatActivity {
                         return;
                     }
                     updateBarometerValue(characteristic);
-                    Log.i(TAG, "Characteristic " + characteristic.getUuid() + " changed value!");
                     break;
 
                 case MSG_PROGRESS:
@@ -455,5 +458,6 @@ public class SensorOutput extends AppCompatActivity {
         int f1 = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getInt();
         mBarometer.setText(String.format("%d\nPa", f1));
     }
+
 
 }
