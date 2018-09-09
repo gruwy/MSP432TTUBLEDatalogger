@@ -30,6 +30,7 @@ public class SensorOutput extends AppCompatActivity {
     private static final String TAG = "Data Output";
 
     // Declaring required items for sensor output
+    private Menu menu;
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothGatt mBluetoothGatt;
     private ProgressDialog mProgress;
@@ -119,7 +120,8 @@ public class SensorOutput extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.data_menu, menu);
-        MenuItem rssi = menu.findItem(R.id.rssi);
+        super.onCreateOptionsMenu(menu);
+        this.menu = menu;
         return true;
     }
 
@@ -344,10 +346,18 @@ public class SensorOutput extends AppCompatActivity {
             }
         }
 
-        public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status){
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d(TAG, String.format("BluetoothGatt ReadRssi[%d]", rssi));
-            }
+        public void onReadRemoteRssi(BluetoothGatt gatt, final int rssi, final int status){
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    MenuItem rssiUpdate = menu.findItem(R.id.rssi);
+                    String rssiString =  String.valueOf(rssi);
+                    if (status == BluetoothGatt.GATT_SUCCESS) {
+                        rssiUpdate.setTitle(rssiString + " dBm");
+                        Log.d(TAG, String.format("BluetoothGatt Read Rssi = [%d]", rssi));
+                    }
+                }
+            });
         }
 
     };
